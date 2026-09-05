@@ -13,6 +13,23 @@ print(f"panel2 {panel2.value}")
 sum1 = 0.0
 sum2 = 0.0
 sum3 = 0.0
+
+#setup motors and controler
+motor1 = gpio.Motor(24,25)
+motor2 = gpio.Motor(12,13)
+motor1on = gpio.DigitalOutputDevice(23)
+motor2on = gpio.DigitalOutputDevice(18)
+
+
+#setup switches
+check1 = gpio.Button(17, pull_up=True)
+check2 = gpio.Button(27, pull_up=True)
+check3 = gpio.Button(22, pull_up=True)
+check4 = gpio.Button(5, pull_up=True)
+
+#check if demo mode
+demo = gpio.Button(26, pull_up=False)
+
 def avgcheck(num):
     times = num
     global sum1
@@ -32,24 +49,6 @@ def avgcheck(num):
     sum2 = sum2/float(num)
     sum3 = sum3/float(num)
 
-
-
-    
-
-#setup motors and controler
-motor1 = gpio.Motor(24,25)
-motor2 = gpio.Motor(12,13)
-motor1on = gpio.DigitalOutputDevice(23)
-motor2on = gpio.DigitalOutputDevice(18)
-
-
-#setup switches
-check1 = gpio.Button(17, pull_up=True)
-check2 = gpio.Button(27, pull_up=True)
-check3 = gpio.Button(22, pull_up=True)
-check4 = gpio.Button(5, pull_up=True)
-
-
 def pancheck():
     global check1
     global check2
@@ -60,21 +59,12 @@ def tiltcheck():
     global check4
     return check3.is_pressed or check4.is_pressed
 
-
-#wait for switch to turn on
-demo = gpio.Button(26, pull_up=False)
-
-
-#start pan
-
 def init():
     global count, direction, previous_direction
     count = 0
     direction = 0
     previous_direction = 3
     avgcheck(3)
-
-
 
 def tilt():
     global sum1, sum2, sum3,  motor2, direction, previous_direction, count, threshold, motor2on
@@ -178,21 +168,6 @@ def tilt():
     motor2on.off()
     print("motor2 stopped")
 
-avgcheck(3)
-"""checkcount = 0
-while checkcount < 20:
-    time.sleep(1)
-    avgcheck(3)
-    #print(f"panel1 {sum1}")
-    print(f"panel2 {sum2}")
-    print(f"panel3 {sum3}")
-    print(" ")
-
-    checkcount += 1
-    """
-
-#turn towards higher
-
 def pan():
     global sum1, sum2, sum3,  motor1, direction, previous_direction, count, threshold, motor1on
     motor1on.on()
@@ -292,13 +267,24 @@ def pan():
     motor1on.off()
     print("motor1 stopped")
 
+avgcheck(3)
+"""checkcount = 0
+while checkcount < 20:
+    time.sleep(1)
+    avgcheck(3)
+    #print(f"panel1 {sum1}")
+    print(f"panel2 {sum2}")
+    print(f"panel3 {sum3}")
+    print(" ")
 
+    checkcount += 1
+    """
 
-if demo.is_pressed:
-    #reset function
+if demo.is_pressed:                             #Checks to see if a switch is turned on to perform the full swivel
+    
     motor2on.on()
     print("moving forwards")
-    if not check3.is_pressed:
+    if not check3.is_pressed:                   #Tilts the maximum amount upwards until it hits the switch
         motor2.forward(0.3)
         check3.wait_for_press()
         motor2.stop()
@@ -306,49 +292,53 @@ if demo.is_pressed:
     time.sleep(1)
 
     #tilt
-    motor2on.on()
+    motor2on.on()                               #Tilts down to a starting angle
     motor2.backward(0.3)
     time.sleep(3)
     motor2.stop()
     motor2on.off()
 
     #pan
-    maxdetected = 0
+    maxdetected = 0                             
     maxcount = 0
     count = 0
     motor1on.on()
-    if not check1.is_pressed:
+    if not check1.is_pressed:                   #Pans the maximum amount clockwise until it hits the switch
         motor1.forward(0.5)
         check1.wait_for_press()
     motor1.stop()
+
+
     while not check2.is_pressed:
         avgcheck(3)
-        motor1.backward(0.3)
+        motor1.backward(0.3)                    #Pans counterclockwise incrementally, measuring and recording the maximum output and time.
         if (sum1+sum2)>maxdetected:
             maxdetected = (sum1+sum2)
             maxcount = count
         count +=1
         time.sleep(1)
         motor1.stop()
-    motor1.forward(0.3)
+
+    motor1.forward(0.3)                         #Pans back clockwise to the position of maximum output based on the recorded time
     print(maxcount)
     print(count)
     time.sleep(count-maxcount)
     motor1.stop()
-    avgcheck(3)
-    if sum1 > max(sum2,sum3):
-        pan()
-        tilt()
-    else:
-        tilt()
-        pan()
-else:
-    avgcheck(3)
-    if sum1 > max(sum2,sum3):
-        pan()
-        tilt()
-    else:
-        tilt()
-        pan()
 
+
+    avgcheck(3)
+    if sum1 > max(sum2,sum3):                   #Checks whether which part has a larger signal and starts in that directino.
+        pan()
+        tilt()
+    else:
+        tilt()
+        pan()
+else:                                           #Immediately begins trackinging towards the side with the greater signal
+    avgcheck(3)
+    if sum1 > max(sum2,sum3):                   #Checks whether which part has a larger signal and starts in that directino.
+        pan()
+        tilt()
+    else:
+        tilt()
+        pan()
     
